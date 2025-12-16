@@ -1,0 +1,45 @@
+{
+  "name": "staking_aegon",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@coinbase/wallet-sdk": "^4.3.7",
+    "@metamask/sdk": "^0.33.1",
+    "@tanstack/react-query": "^5.90.12",
+    "@wagmi/core": "^3.0.0",
+    "@walletconnect/ethereum-provider": "^2.23.1",
+    "axios": "^1.13.2",
+    "date-fns": "^4.1.0",
+    "drizzle-orm": "^0.45.1",
+    "jsonwebtoken": "^9.0.3",
+    "moralis": "^2.27.2",
+    "next": "16.0.10",
+    "pg": "^8.16.3",
+    "react": "19.2.1",
+    "react-dom": "19.2.1",
+    "react-hot-toast": "^2.6.0",
+    "react-icons": "^5.5.0",
+    "recharts": "^3.6.0",
+    "siwe": "^3.0.0",
+    "viem": "^2.42.1",
+    "wagmi": "^3.1.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^20",
+    "@types/pg": "^8.16.0",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.0.10",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
