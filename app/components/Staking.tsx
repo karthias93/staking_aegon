@@ -17,7 +17,7 @@ import { network, chainId } from "../config/chain";
 import { useTokenBalanceAndAllowance, getTermList } from "./stakingContract";
 import stakingAbi from "@/app/contract/staking.json";
 import ERC20_ABI from "@/app/contract/Erc20.json";
-import { wagmiConfig } from "../config/wagmiConfig";
+import { getWagmiConfig } from "../config/wagmiConfig";
 import StakedList from "./StakedList";
 import { getUserRewards, getChart } from "./StakingApi";
 import { toFixedTrunc } from "../utils/helper";
@@ -35,7 +35,7 @@ export default function StakeDashboard(): any {
   const [ethrate, setethrate] = useState<number>(0);
 
   const { address, isConnected } = useAccount();
-
+  const wagmiConfig = getWagmiConfig();
   const handleAmountChange = (e: ChangeEvent<HTMLInputElement>): void => {
     setAmount(Number(e.target.value));
   };

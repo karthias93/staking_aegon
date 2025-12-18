@@ -1,6 +1,6 @@
 import { NextRequest,NextResponse  } from "next/server";
-import { stakinglist,stakingplan,users,stakehistory,withdrawhistory} from "../../db/schema/user";
-import { db } from "../../db/route";
+import { stakinglist,stakingplan,users,stakehistory,withdrawhistory} from "../../../lib/db/schema/user";
+import { db } from "../../../lib/db/db";
 import { and, eq } from "drizzle-orm";
 import {pendingReward,getStakeInfo} from "../../lib/stake"
 

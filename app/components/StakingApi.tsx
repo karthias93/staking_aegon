@@ -11,7 +11,7 @@ import toast from "react-hot-toast";
 
 export interface StakeInfo {
   id: number;
-  period: string | undefined;
+  period: number;
   amount: number;
   startDate: string;
   endDate: string;
@@ -113,9 +113,12 @@ export async function getUserStakedList(walletAddress: string): Promise<StakeInf
       return {
           id: item.stakeId,
           stakeId: item.id,
-          period: Object.keys(TERMS).find(
-            (key) => TERMS[key].id === item.stakeId
-          ),
+          period: ((): number => {
+            const found = Object.keys(TERMS).find(
+              (key) => TERMS[key].id === item.stakeId
+            );
+            return found ? Number(found) : 0;
+          })(),
           amount: item.amount,
           startDate: format(new Date(start), "MM/dd/yyyy HH:mm"),
           endDate: format(new Date(end), "MM/dd/yyyy HH:mm"),

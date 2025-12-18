@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { db } from "../../db/route";
-import { games } from "../../db/schema/user";
+import { db } from "../../../lib/db/db";
+import { games } from "../../../lib/db/schema/user";
 import { eq,desc } from "drizzle-orm";
 import {fetchXP} from "../../lib/stake";
 

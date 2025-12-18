@@ -10,8 +10,8 @@ type StakedListProps = {
   isConnected: boolean;
   userAddress?: `0x${string}`;
   isloadStake: boolean;
-  onUpdateBalance: (val: any) => void;
-  onUpdateReward: (val: any) => void;
+  onUpdateBalance: () => void;
+  onUpdateReward: () => void;
 };
 
 export default function StakedList({
@@ -53,13 +53,17 @@ export default function StakedList({
       return;
     }
     setIsLoading(true);
-    await withdrawAmount(userAddress,item,stakedId);
+    if (!userAddress) {
+      setIsLoading(false);
+      return;
+    }
+    await withdrawAmount(userAddress, item, stakedId);
     if (isWithdraw == 1) {
       setcurrentId(0);
     } else {
       setcurrentId1(0);
     }
-    onUpdateBalance("refetch");
+    onUpdateBalance();
     setTimeout(function () {
       getList();
       setIsLoading(false);
@@ -72,7 +76,11 @@ export default function StakedList({
       }
       setIsLoading1(true);
       setclaimId(item);
-      await claimReward(userAddress,stakedId)
+      if (!userAddress) {
+        setIsLoading1(false);
+        return;
+      }
+      await claimReward(userAddress, stakedId);
       setIsLoading1(false);
       
       setTimeout(function(){
@@ -104,7 +112,7 @@ export default function StakedList({
                 key={idx}
                 className="bg-[#012D34] text-white rounded-2xl shadow-lg p-5 space-y-3"
               >
-                <h3 className="text-lg font-bold">{(stake.period/86400).toFixed(0)} Day Stake</h3>
+                <h3 className="text-lg font-bold">{(Number(stake.period ?? 0)/86400).toFixed(0)} Day Stake</h3>
                 <p className="text-xl font-semibold">{stake.amount} $AEGON</p>
 
                 <div className="text-sm text-gray-300 space-y-1">

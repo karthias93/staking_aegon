@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, schema } from "../db/route";
+import { db, schema } from "../../lib/db/db";
 import { eq } from "drizzle-orm";
 import { ethers } from "ethers";
-import { settings } from "../db/schema/user";
+import { settings } from "../../lib/db/schema/user";
 import ERC20_ABI from "../../contract/Erc20.json";
 import jwt from "jsonwebtoken";
 import { xpBonus } from "../lib/stake";

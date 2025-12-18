@@ -12,7 +12,7 @@ import { network, chainId } from "../config/chain";
 import { multicall, createConfig, http } from "@wagmi/core";
 import { format } from "date-fns";
 import { TERMS } from "../constants";
-import { wagmiConfig } from "../config/wagmiConfig";
+import { getWagmiConfig } from "../config/wagmiConfig";
 import toast from "react-hot-toast";
 import { withdrawAmt } from "./StakingApi";
 
@@ -65,7 +65,6 @@ export function useTokenBalanceAndAllowance() {
   } = useBalance({
     address: userAddress,
     chainId: chainId,
-    enabled: !!userAddress,
   });
 
   const contracts = [
@@ -111,9 +110,9 @@ export function useTokenBalanceAndAllowance() {
     allowance = Number(rawAllowance) / 10 ** decimals;
   }
 
-  if (nativeData && nativeData.formatted) {
-    nativebalance = Number(nativeData.formatted);
-  }
+  // if (nativeData && nativeData.formatted) {
+  //   nativebalance = Number(nativeData.formatted);
+  // }
 
   const result: TokenResult = {
     balance: isNaN(balance) ? 0 : balance,
@@ -127,7 +126,7 @@ export function useTokenBalanceAndAllowance() {
     error,
     refetch: () => {
       refetchNative();
-      refetchContracts();
+      // refetchContracts();
     },
   };
 }
@@ -148,7 +147,7 @@ export async function getUserStakedList(userAddress: `0x${string}`) {
   }
 
   const results = await multicall(config, {
-    contracts: contracts,
+    contracts: contracts as any,
   });
   let decimals = 18;
   let list: StakeInfo[] = results.map((res, idx) => {
@@ -156,8 +155,13 @@ export async function getUserStakedList(userAddress: `0x${string}`) {
       return {
         id: termIds[idx],
         amount: 0,
+        totalstake: 0,
         startDate: "",
         endDate: "",
+        progress: 0,
+        isEnded: false,
+        period: 0,
+        isClaimed: 0,
       };
     }
 
@@ -187,12 +191,17 @@ export async function getUserStakedList(userAddress: `0x${string}`) {
 
     return {
       id: termIds[idx],
-      period: Object.keys(TERMS).find((key) => TERMS[key].id === termIds[idx]),
+      period: ((): number => {
+        const found = Object.keys(TERMS).find((key) => TERMS[key].id === termIds[idx]);
+        return found ? Number(found) : 0;
+      })(),
       amount,
+      totalstake: 0,
       startDate,
       endDate,
       progress,
       isEnded: new Date(end) < new Date(),
+      isClaimed: 0,
     };
   });
 
@@ -207,6 +216,7 @@ export async function withdrawAmount(
   stakedId: number
 ) {
   let toastId = undefined;
+  const wagmiConfig = getWagmiConfig()
   try {
     toastId = toast.loading("Waiting for confirmation...");
 
@@ -262,16 +272,17 @@ export async function withdrawAmount(
 }
 
 export async function getTermList() {
+  const wagmiConfig = getWagmiConfig()
   try {
-    let nextTermId = await readContract(wagmiConfig, {
+    const rawNextTermId = await readContract(wagmiConfig, {
       address: STAKING_CONTRACT_ADDRESS as `0x${string}`,
       abi: STAKING_CONTRACT_ABI,
       functionName: "nextTermId",
     });
-    nextTermId = Number(nextTermId);
+    const nextTermId = Number(rawNextTermId);
 
+    let contracts: any[] = [];
     if (nextTermId > 0) {
-      var contracts = [];
       for (let j = 1; j < nextTermId; j++) {
         contracts.push({
           address: STAKING_CONTRACT_ADDRESS,
@@ -283,7 +294,7 @@ export async function getTermList() {
     }
 
     const results = await multicall(config, {
-      contracts: contracts,
+      contracts: contracts as any,
     });
 
     let list: PlanInfo[] = results.map((res, idx) => {

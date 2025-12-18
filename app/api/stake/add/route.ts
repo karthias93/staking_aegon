@@ -1,6 +1,6 @@
 import { NextRequest,NextResponse  } from "next/server";
-import { stakinglist,stakingplan,users,stakehistory  } from "../../db/schema/user";
-import { db } from "../../db/route";
+import { stakinglist,stakingplan,users,stakehistory  } from "../../../lib/db/schema/user";
+import { db } from "../../../lib/db/db";
 import { and, eq,gt } from "drizzle-orm";
 import {pendingReward,getStakeInfo} from "../../lib/stake"
 import { ethers } from "ethers";
@@ -171,7 +171,7 @@ export async function POST(req: NextRequest) {
       .limit(1);
 
        const startDate = new Date();
-       const endDate = new Date(startDate.getTime() + days * 1000);
+       const endDate = new Date(startDate.getTime() + (days ?? 1) * 1000);
        //const endDate = new Date(startDate.getTime() + days * 1000);
        console.log(planId,walletAddress,'planId,walletAddress')
       //let {startDate,endDate}=await getStakeInfo(planId,walletAddress,days)
@@ -203,7 +203,7 @@ export async function POST(req: NextRequest) {
 }
 
 
-async function checkTx(retry = 0, obj) {
+async function checkTx(retry = 0, obj: any) {
   try {
     const tx = await provider?.getTransaction(obj?.txid);
 
@@ -218,7 +218,7 @@ async function checkTx(retry = 0, obj) {
     const iface = new ethers.Interface(ABI);
     const decoded = iface.parseTransaction({ data: tx.data, value: tx.value });
 
-    const amount = ethers.formatUnits(decoded.args[0], 18);
+    const amount = ethers.formatUnits(decoded?.args?.[0] ?? 0, 18);
 
     if (!amount) {
       throw new Error("Transaction amount invalid");
@@ -226,7 +226,7 @@ async function checkTx(retry = 0, obj) {
 
     if (
       tx.from.toLowerCase() !== obj.walletAddress.toLowerCase() ||
-      tx.to.toLowerCase() !== process.env.NEXT_PUBLIC_STAKING_CONTRACT?.toLowerCase()
+      tx?.to?.toLowerCase() !== process.env.NEXT_PUBLIC_STAKING_CONTRACT?.toLowerCase()
     ) {
       throw new Error("Invalid staking transaction");
     }
@@ -234,7 +234,7 @@ async function checkTx(retry = 0, obj) {
     await db.transaction(async (trx) => {
      
       await trx.insert(stakehistory).values({
-        amount: amount || 0,
+        amount: parseFloat(amount) || 0,
         walletAddress: obj?.walletAddress,
         txid: obj?.txid,
         userId: obj?.userId,
@@ -259,13 +259,13 @@ async function checkTx(retry = 0, obj) {
         const existing = isExits[0];
 
         const newReward = pendingReward({
-          amount: existing.amount,
+          amount: Number(existing.amount ?? 0),
           aprBps: obj.apr * 100,
           startDate: existing.lastClaimed,
           endDate: existing.endDate,
         });
 
-        const updatedAmount = existing.amount + Number(amount);
+        const updatedAmount = Number(existing.amount) + Number(amount);
         const updatedPending = (existing.reward || 0) + newReward;
 
         await trx
@@ -281,7 +281,7 @@ async function checkTx(retry = 0, obj) {
       } else {
         
         await trx.insert(stakinglist).values({
-          amount,
+          amount: parseFloat(String(amount)) || 0,
           walletAddress: obj?.walletAddress,
           startDate: obj?.startDate,
           endDate: obj?.endDate,
@@ -295,8 +295,8 @@ async function checkTx(retry = 0, obj) {
     });
    
 
-  } catch (err) {
-    console.log(`Attempt ${retry + 1} failed:`, err?.message);
+  } catch (err: any) {
+    console.log(`Attempt ${retry + 1} failed:`, err?.message || err);
     if (retry < 9) {
       setTimeout(checkTx, 3000, retry + 1, obj);
     } else {

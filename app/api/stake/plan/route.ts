@@ -1,6 +1,6 @@
 import { NextRequest,NextResponse  } from "next/server";
-import { stakingplan} from "../../db/schema/user";
-import { db } from "../../db/route";
+import { stakingplan} from "../../../lib/db/schema/user";
+import { db } from "../../../lib/db/db";
 
 export async function GET(req: NextRequest) {
   try {

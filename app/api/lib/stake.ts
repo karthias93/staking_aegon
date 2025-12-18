@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
 import StakingABI from "../../contract/staking.json"
 //import {rpc} from "../../config/chain"
-import { db, schema } from "../db/route";
+import { db, schema } from "../../lib/db/db";
 import { eq } from "drizzle-orm";
 // const BSC_TESTNET_RPC =  "https://sepolia.base.org";
 const BSC_TESTNET_RPC =  process.env.RPC;

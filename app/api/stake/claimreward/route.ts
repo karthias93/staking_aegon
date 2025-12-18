@@ -1,6 +1,6 @@
 import { NextRequest,NextResponse  } from "next/server";
-import { stakinglist,stakingplan,users,stakehistory,claimedrewards  } from "../../db/schema/user";
-import { db } from "../../db/route";
+import { stakinglist,stakingplan,users,stakehistory,claimedrewards  } from "../../../lib/db/schema/user";
+import { db } from "../../../lib/db/db";
 import { and, eq } from "drizzle-orm";
 import {pendingReward,getStakeInfo,claimBonus} from "../../lib/stake"
 
@@ -50,9 +50,10 @@ export async function POST(req: NextRequest) {
 
     const existing = isExits[0];
 
-    const date1 = new Date()>existing.endDate?existing.endDate:new Date();
+    const endDateObj = new Date(existing.endDate);
+    const date1 = new Date() > endDateObj ? endDateObj : new Date();
     const date2 = new Date(existing.lastClaimed);
-    const diffMs = date1 - date2;
+    const diffMs = date1.getTime() - date2.getTime();
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     let oneDay = new Date(existing.lastClaimed);
     
@@ -71,17 +72,17 @@ export async function POST(req: NextRequest) {
     
     let apr = existing.aprBps || 0;
     const newReward = pendingReward({
-        amount: existing.amount ||0,
-        aprBps: apr * 100,
-        startDate: existing.lastClaimed,
-        endDate:oneDay,
+      amount: Number(existing.amount ?? 0),
+      aprBps: apr * 100,
+      startDate: existing.lastClaimed,
+      endDate:oneDay,
     });
     oneDay = oneDay>endDate?endDate:oneDay;
     const updatedPending = (existing.reward || 0) + newReward;
 
-    let updateCnd = {
-        reward: 0,
-        lastClaimed:oneDay
+    let updateCnd: any = {
+      reward: 0,
+      lastClaimed:oneDay
     }
     if(new Date()>existing.endDate){
           updateCnd = {
