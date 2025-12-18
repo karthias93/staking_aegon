@@ -4,6 +4,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   basePath: "/staking",
   assetPrefix: "/staking",
+  trailingSlash: false,
   // Externalize packages that should not be bundled on the server
   serverExternalPackages: [
     "@walletconnect/ethereum-provider",
