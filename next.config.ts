@@ -2,6 +2,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  basePath: "/staking",
   // Externalize packages that should not be bundled on the server
   serverExternalPackages: [
     "@walletconnect/ethereum-provider",
@@ -11,9 +12,8 @@ const nextConfig: NextConfig = {
     "pino",
     "thread-stream",
   ],
-  
-  turbopack: {
-  },
+
+  turbopack: {},
 };
 
 export default nextConfig;
