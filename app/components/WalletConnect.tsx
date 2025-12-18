@@ -14,8 +14,8 @@ import { toFixedTrunc } from "../utils/helper";
 export default function WalletButton() {
   const { connect, connectors, connectAsync } = useConnect();
   const { disconnect } = useDisconnect();
-  const { xpbalance,reloadXP } = useXp();
-  const { address, isConnected } = useAccount();
+  const { xpbalance, reloadXP } = useXp();
+  const { address, isConnected, connector: activeConnector } = useAccount();
   const { setWalletAddress } = useWallet();
   const { signMessageAsync } = useSignMessage();
 
@@ -25,6 +25,7 @@ export default function WalletButton() {
   const [username, setUsername] = useState("");
   const [showBonus, setshowBonus] = useState(false);
   const [showBetaPact, setShowBetaPact] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
 
   const hasWelcomed = useRef(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -59,6 +60,15 @@ export default function WalletButton() {
     }
   }, [isConnected, address, setWalletAddress]);
 
+  useEffect(() => {
+    if (isConnected && activeConnector) {
+      console.log("Connector connected:", activeConnector.name);
+      console.log("Wallet address:", address);
+    } else {
+      console.log("Connector disconnected");
+    }
+  }, [isConnected, activeConnector, address]);
+
   const shortenAddress = (addr: string) =>
     addr ? `${addr.slice(0, 5)}...${addr.slice(-5)}` : "";
 
@@ -70,8 +80,6 @@ export default function WalletButton() {
         username,
         walletAddress: address,
       });
-
-      console.log(response, "responseresponseresponse");
 
       if (response.data?.token) {
         localStorage.setItem("token", response.data.token);
@@ -114,9 +122,8 @@ export default function WalletButton() {
 
           if (res.data?.isairdrop) {
             setshowBonus(true);
-            reloadXP()
+            reloadXP();
           }
-
         } else {
           setShowBetaPact(true);
         }
@@ -134,9 +141,21 @@ export default function WalletButton() {
   }, [isConnected, address]);
 
   const handleConnectAndSignIn = async (connector: any) => {
+    if (isConnecting) return; // Prevent multiple simultaneous connection attempts
+
+    setIsConnecting(true);
+    const toastId = toast.loading("Connecting wallet...");
+
     try {
+      // Connect wallet
       const result = await connectAsync({ connector, chainId });
-      console.log(result, "resultresultresultresult");
+
+      // Wait for connection to be fully established
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      toast.loading("Preparing signature...", { id: toastId });
+
+      // Create SIWE message
       const nonce = new Date().getTime().toString();
       const message = new SiweMessage({
         domain: window.location.host,
@@ -149,16 +168,34 @@ export default function WalletButton() {
         nonce,
       });
 
+      // Sign message
       const signature = await signMessageAsync({
         message: message.prepareMessage(),
       });
+
       if (signature) {
+        toast.success("Wallet connected successfully!", { id: toastId });
         setIsOpen(false);
+
+        // Wait a bit more to ensure everything is ready
+        await new Promise((resolve) => setTimeout(resolve, 300));
+
+        reloadXP();
       }
-       reloadXP()
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error connecting/signing:", err);
+
+      let errorMsg = "Failed to connect wallet";
+      if (err?.message?.includes("User rejected")) {
+        errorMsg = "Connection cancelled by user";
+      } else if (err?.message?.includes("User denied")) {
+        errorMsg = "Signature cancelled by user";
+      }
+
+      toast.error(errorMsg, { id: toastId });
       disconnect();
+    } finally {
+      setIsConnecting(false);
     }
   };
 
@@ -193,6 +230,7 @@ export default function WalletButton() {
               onClick={() => {
                 disconnect();
                 setShowDropdown(false);
+                hasWelcomed.current = false; // Reset welcome flag on disconnect
               }}
               className="block w-full text-left px-4 py-2 font-semibold text-lg text-red-400 hover:bg-red-600 hover:text-white rounded-b-lg transition"
             >
@@ -220,14 +258,9 @@ export default function WalletButton() {
                   <li>
                     • Your Game Ownership NFTs live in testnet shadows for now.
                   </li>
-                  {/* <li>
-                    • Until my next update, your creations remain hidden from
-                    public page.
-                  </li> */}
                 </ul>
 
                 <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
-                  {/* Accept button */}
                   <button
                     onClick={() => {
                       setShowBetaPact(false);
@@ -243,7 +276,6 @@ export default function WalletButton() {
                     <span className="absolute inset-1 border-2 border-cyan-400 pointer-events-none [clip-path:inherit] transition-colors duration-300 hover:border-cyan-200 hover:shadow-[0_0_12px_#3FE2E2]"></span>
                   </button>
 
-                  {/* Flee button */}
                   <button
                     onClick={() => {
                       setShowBetaPact(false);
@@ -274,7 +306,7 @@ export default function WalletButton() {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full p-2 mb-4 rounded-lg border border-white text-white placeholder-white"
+                className="w-full p-2 mb-4 rounded-lg border border-white text-white placeholder-white bg-[#2a2a3e]"
                 placeholder="Username"
               />
               <button
@@ -286,11 +318,12 @@ export default function WalletButton() {
             </div>
           </div>
         )}
+
         {showBonus && (
           <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50">
-            <div className="bg-[#1e1e2f] rounded-2xl shadow-2xl w-full max-w-sm mx-auto text-center relative">
+            <div className="bg-[#1e1e2f] rounded-2xl shadow-2xl w-full max-w-sm mx-auto text-center relative p-6">
               <h2 className="text-2xl sm:text-3xl font-extrabold mb-3 text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-pink-500">
-                🎉Congratulations!🎉
+                🎉 Congratulations! 🎉
               </h2>
               <p className="text-white text-base sm:text-lg mb-6 px-2">
                 Awesome!{" "}
@@ -299,7 +332,7 @@ export default function WalletButton() {
               </p>
               <button
                 onClick={() => setshowBonus(false)}
-                className="mt-4  px-4 py-2 rounded-lg bg-gray-700 text-gray-200 hover:bg-gray-600 transition"
+                className="mt-4 px-4 py-2 rounded-lg bg-gray-700 text-gray-200 hover:bg-gray-600 transition"
               >
                 Close
               </button>
@@ -314,12 +347,14 @@ export default function WalletButton() {
     <div>
       <button
         onClick={() => setIsOpen(true)}
+        disabled={isConnecting}
         className="inline-block bg-gradient-to-r from-[#FFFFFF] to-[#3F9C9D] 
              hover:from-[#3F9C9D] hover:to-[#FFFFFF] 
              text-[#011530] px-6 py-2 font-bold text-xl 
-             transition-colors duration-300"
+             transition-colors duration-300
+             disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        Connect Wallet
+        {isConnecting ? "Connecting..." : "Connect Wallet"}
       </button>
 
       {isOpen && (
@@ -341,10 +376,12 @@ export default function WalletButton() {
                   <button
                     key={connector.uid}
                     onClick={() => handleConnectAndSignIn(connector)}
+                    disabled={isConnecting}
                     className="inline-block bg-gradient-to-r from-[#FFFFFF] to-[#3F9C9D] 
                       hover:from-[#3F9C9D] hover:to-[#FFFFFF] 
                       text-black px-4 py-2 font-bold text-xl 
-                      transition-colors duration-300 rounded-lg"
+                      transition-colors duration-300 rounded-lg
+                      disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {connector.name}
                   </button>
@@ -353,7 +390,8 @@ export default function WalletButton() {
 
             <button
               onClick={() => setIsOpen(false)}
-              className="mt-4 w-full px-4 py-2 rounded-lg bg-gray-700 text-gray-200 hover:bg-gray-600 transition"
+              disabled={isConnecting}
+              className="mt-4 w-full px-4 py-2 rounded-lg bg-gray-700 text-gray-200 hover:bg-gray-600 transition disabled:opacity-50"
             >
               Cancel
             </button>

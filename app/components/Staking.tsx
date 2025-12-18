@@ -24,6 +24,8 @@ import { toFixedTrunc } from "../utils/helper";
 
 export default function StakeDashboard(): any {
   const { address: userAddress } = useAccount();
+  const { connector } = useAccount();
+  const [isConnectorReady, setIsConnectorReady] = useState(false);
 
   const [amount, setAmount] = useState<number>(0);
   const [duration, setDuration] = useState<number>(90);
@@ -57,6 +59,25 @@ export default function StakeDashboard(): any {
     getrewardInfo();
   }, [address, isConnected]);
 
+  useEffect(() => {
+    const checkConnector = async () => {
+      if (isConnected && connector) {
+        try {
+          // Try to get the provider to verify connection is ready
+          await connector.getProvider();
+          setIsConnectorReady(true);
+        } catch (err) {
+          console.error("Connector not ready:", err);
+          setIsConnectorReady(false);
+        }
+      } else {
+        setIsConnectorReady(false);
+      }
+    };
+
+    checkConnector();
+  }, [isConnected, connector]);
+
   async function getrewardInfo() {
     if (address) {
       let { totalPending, totalClaimed } = await getUserRewards(address);
@@ -77,17 +98,23 @@ export default function StakeDashboard(): any {
   }
 
   const handleStake = async () => {
-    if (!address) {
+    if (!address || !isConnected) {
       toast.error("Please connect your wallet to continue.");
       return;
     }
+
     if (tokenData?.balance < amount) {
       toast.error("Insufficient balance");
       return;
     }
+
     setIsLoading(true);
     let toastId = undefined;
+
     try {
+      const wagmiConfig = getWagmiConfig();
+
+      // Handle approval if needed
       if (tokenData?.allowance < amount) {
         toastId = toast.loading("Submitting approval transaction...");
         let allowanceAmt = 10000000000000000000;
@@ -103,6 +130,7 @@ export default function StakeDashboard(): any {
           chain: network,
           chainId: chainId,
         });
+
         toast.loading(
           `Waiting for confirmation...\nTx: ${hash.slice(0, 10)}...`,
           {
@@ -115,6 +143,7 @@ export default function StakeDashboard(): any {
           hash,
           chainId: chainId,
         });
+
         toast.success(
           `Approval confirmed!\nYou can now proceed with staking.`,
           {
@@ -123,17 +152,36 @@ export default function StakeDashboard(): any {
             icon: "✅",
           }
         );
+
+        // Dismiss approval toast before staking
+        toast.dismiss(toastId);
+        toastId = undefined;
       }
 
-      const estimatedGas = await simulateContract(wagmiConfig, {
-        address: process.env.NEXT_PUBLIC_STAKING_CONTRACT as `0x${string}`,
-        abi: stakingAbi,
-        functionName: "stake",
-        args: [parseUnits(amount.toString(), 18), TERMS?.[duration]?.id ?? 1],
-        chainId: chainId,
-      });
+      // Add a small delay to ensure approval is fully processed
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      console.log("Estimated gas:", estimatedGas.toString());
+      // Simulate before writing
+      toastId = toast.loading("Preparing stake transaction...");
+
+      try {
+        await simulateContract(wagmiConfig, {
+          address: process.env.NEXT_PUBLIC_STAKING_CONTRACT as `0x${string}`,
+          abi: stakingAbi,
+          functionName: "stake",
+          args: [parseUnits(amount.toString(), 18), TERMS?.[duration]?.id ?? 1],
+          chainId: chainId,
+          account: address, // Explicitly pass the account
+        });
+      } catch (simError: any) {
+        console.error("Simulation error:", simError);
+        throw new Error(
+          simError?.shortMessage || "Transaction simulation failed"
+        );
+      }
+
+      // Execute stake
+      toast.loading("Submitting stake transaction...", { id: toastId });
 
       const stakeHash = await writeContract(wagmiConfig, {
         address: process.env.NEXT_PUBLIC_STAKING_CONTRACT as `0x${string}`,
@@ -150,14 +198,15 @@ export default function StakeDashboard(): any {
           duration: Infinity,
         }
       );
-      const receipt = await waitForTransactionReceipt(wagmiConfig, {
+
+      await waitForTransactionReceipt(wagmiConfig, {
         hash: stakeHash,
         chainId: chainId,
       });
 
+      // Save to database
       try {
-        console.log(TERMS, "TERMS", duration);
-        const addRes = await axios.post(
+        await axios.post(
           "/api/stake/add",
           {
             txId: stakeHash,
@@ -172,44 +221,47 @@ export default function StakeDashboard(): any {
           }
         );
       } catch (err) {
-        console.log(err, "errerrerrerrerrerr");
+        console.error("Database save error:", err);
       }
 
       await refetch();
 
       toast.dismiss(toastId);
       toast.success(`Stake completed successfully`, {
-        id: toastId,
         duration: 5000,
         icon: "✅",
       });
+
       setIsLoading(false);
       setisloadStake(true);
-      setTimeout(function () {
+      setTimeout(() => {
         setisloadStake(false);
       }, 5000);
-    } catch (err) {
+    } catch (err: any) {
       let errMsg = "Something went wrong!";
+      console.error("Stake error:", err);
+
       if (err instanceof ContractFunctionExecutionError) {
         let msg = (err as any).cause?.reason || err.message;
-        console.error(
-          "Revert reason:",
-          (err as any).cause?.reason || err.message
-        );
         if (msg.includes("please withdraw")) {
           errMsg = "Please withdraw and continue";
         } else if (msg.includes("funds")) {
           errMsg =
-            "Insufficient gas. Add more funds to cover the transaction fee(ETH)";
+            "Insufficient gas. Add more funds to cover the transaction fee (ETH)";
         }
-      } else {
-        console.error("Unknown error:", err);
+      } else if (err?.message?.includes("Connector not connected")) {
+        errMsg = "Wallet connection lost. Please reconnect your wallet.";
+      } else if (
+        err?.message?.includes("User rejected") ||
+        err?.message?.includes("User denied")
+      ) {
+        errMsg = "Transaction rejected by user";
       }
+
       setIsLoading(false);
       toast.error(errMsg, {
         id: toastId,
         duration: 5000,
-        icon: "✅",
       });
     }
   };
@@ -252,14 +304,12 @@ export default function StakeDashboard(): any {
                 fully playable games with no human intervention. $AEGON is the
                 project token.
               </p>
-              <p className="text-left gap-2 flex flex-col">
+              <div className="text-left gap-2 flex flex-col">
                 <p>How it works:</p>
-
                 <p>
                   Stake $AEGON, to earn Jungl XP, our utility point system.
                   Jungl XP can be used to:
                 </p>
-
                 <p>- Buy and trade NFTs and Ordinals on JUNGL Marketplace</p>
                 <p>
                   - Participate in live game sessions, such as Bitcoin Derby and
@@ -267,7 +317,7 @@ export default function StakeDashboard(): any {
                 </p>
                 <p>- Enhance gameplay performance through in-game boosts</p>
                 <p>- Purchase and upgrade access to games in the ecosystem</p>
-              </p>
+              </div>
             </div>
           </div>
 
@@ -312,7 +362,7 @@ export default function StakeDashboard(): any {
                   <div>
                     AVAILABLE :{" "}
                     <span className="font-normal  text-white">
-                      {tokenData.balance} $AEGON
+                      {toFixedTrunc(tokenData.balance, 4)} $AEGON
                     </span>
                   </div>
                 </div>
@@ -378,21 +428,33 @@ export default function StakeDashboard(): any {
               <div className="flex justify-center mt-10">
                 <button
                   className={`w-[70%] mx-auto px-3 py-4 flex items-center justify-center  
-                bg-gradient-to-r from-[#FFFFFF] to-[#3F9C9D] 
-                text-black font-bold 
-                shadow-[0_4px_6px_#00000099] 
-                hover:from-[#3F9C9D] hover:to-[#FFFFFF] 
-                ${
-                  amount <= 0 || tokenData.balance < amount || loading
-                    ? "bg-gray-400 text-gray-700 cursor-not-allowed shadow-none hover:from-gray-400 hover:to-gray-400"
-                    : "cursor-pointer"
-                }`}
+                  bg-gradient-to-r from-[#FFFFFF] to-[#3F9C9D] 
+                  text-black font-bold 
+                  shadow-[0_4px_6px_#00000099] 
+                  hover:from-[#3F9C9D] hover:to-[#FFFFFF] 
+                  ${
+                    amount <= 0 ||
+                    tokenData.balance < amount ||
+                    loading ||
+                    !isConnected ||
+                    !isConnectorReady
+                      ? "bg-gray-400 text-gray-700 cursor-not-allowed shadow-none hover:from-gray-400 hover:to-gray-400"
+                      : "cursor-pointer"
+                  }`}
                   disabled={
-                    amount <= 0 || tokenData.balance < amount || loading
+                    amount <= 0 ||
+                    tokenData.balance < amount ||
+                    loading ||
+                    !isConnected ||
+                    !isConnectorReady
                   }
                   onClick={handleStake}
                 >
-                  {tokenData.balance < amount
+                  {!isConnected
+                    ? "Please Connect Wallet"
+                    : !isConnectorReady
+                    ? "Wallet Connecting..."
+                    : tokenData.balance < amount
                     ? "Insufficient Balance"
                     : tokenData.allowance >= amount
                     ? `STAKE ${amount.toFixed(

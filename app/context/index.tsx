@@ -1,16 +1,26 @@
 "use client";
 
-import React, { type ReactNode } from "react";
+import React, { type ReactNode, useMemo } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WagmiProvider } from "wagmi";
 import { getWagmiConfig } from "../config/wagmiConfig";
 import { WalletProvider } from "./WalletContext";
 import { XpProvider } from "./XpContext";
 
-const queryClient = new QueryClient();
+// Create QueryClient once outside component
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 export default function ContextProvider({ children }: { children: ReactNode }) {
-  const wagmiConfig = getWagmiConfig()
+  // Memoize config to prevent recreation
+  const wagmiConfig = useMemo(() => getWagmiConfig(), []);
+
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>

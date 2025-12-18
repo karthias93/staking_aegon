@@ -1,11 +1,18 @@
-// wagmiConfig.tsx
 "use client";
 
 import { createConfig, http } from "wagmi";
 import { injected, walletConnect, coinbaseWallet } from "wagmi/connectors";
 import { network, rpc } from "./chain";
 
+// Create config instance once (singleton pattern)
+let wagmiConfigInstance: ReturnType<typeof createConfig> | null = null;
+
 export function getWagmiConfig() {
+  // Return existing instance if already created
+  if (wagmiConfigInstance) {
+    return wagmiConfigInstance;
+  }
+
   const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!;
 
   if (!projectId) {
@@ -15,7 +22,7 @@ export function getWagmiConfig() {
   // Check if we're on the client side
   const isClient = typeof window !== "undefined";
 
-  return createConfig({
+  wagmiConfigInstance = createConfig({
     chains: [network],
     transports: {
       [network.id]: http(rpc),
@@ -38,10 +45,9 @@ export function getWagmiConfig() {
             appLogoUrl: "https://avatars.githubusercontent.com/u/179229932",
           }),
         ]
-      : [
-          // Minimal connectors for SSR (injected is safe)
-          injected({ shimDisconnect: true }),
-        ],
-    ssr: true, // Changed to true since we're handling SSR properly now
+      : [],
+    ssr: true,
   });
+
+  return wagmiConfigInstance;
 }
