@@ -293,7 +293,7 @@ export default function StakeDashboard(): any {
           >
             <div className="bg-gradient-to-b from-[#00000000] to-[#000000] flex items-center justify-center h-50 flex-col">
               <img
-                src="/images/AEGON-ICON.png"
+                src="/staking/images/AEGON-ICON.png"
                 alt="aegon"
                 className="w-[100px] lg:w-[200px]"
               />

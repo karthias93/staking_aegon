@@ -20,7 +20,7 @@ export default function Header({ children }: { children: React.ReactNode }) {
             {/* Left - Logo */}
             <div className="flex items-center gap-2 md:!m-4">
               <a href="/"><Image
-                src="/images/AEGON.svg"
+                src="/staking/images/AEGON.svg"
                 alt="Logo"
                 width={120}
                 height={48}
