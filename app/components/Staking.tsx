@@ -282,7 +282,7 @@ export default function StakeDashboard(): any {
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-b from-[#055656] to-[#004646] text-[#CFFFFF] font-College p-6">
+      <div className="min-h-screen bg-gradient-to-b from-[#055656] to-[#004646] text-[#CFFFFF] text-md font-College p-6">
         <div className="grid grid-cols-1 lg:grid-cols-9 gap-6">
           <div
             className="lg:col-span-2 shadow-lg bg-[#022222] overflow-hidden text-center text-white h-full"
@@ -347,7 +347,7 @@ export default function StakeDashboard(): any {
                   {[25, 50, 75, 100].map((p) => (
                     <button
                       key={p}
-                      className="py-2 px-3 md:px-6 bg-[#022222] hover:bg-[#03636D] rounded-full font-bold text-sm"
+                      className="py-2 px-3 md:px-5 bg-[#022222] hover:bg-[#03636D] rounded-full font-bold text-sm"
                       onClick={() =>
                         setAmount(
                           tokenData?.balance ? (tokenData.balance * p) / 100 : 0
@@ -361,7 +361,7 @@ export default function StakeDashboard(): any {
                 <div className="flex justify-between text-lg mb-4">
                   <div>
                     AVAILABLE :{" "}
-                    <span className="font-normal  text-white">
+                    <span className="font-normal text-md text-white">
                       {toFixedTrunc(tokenData.balance, 4)} $AEGON
                     </span>
                   </div>
