@@ -207,7 +207,7 @@ export default function StakeDashboard(): any {
       // Save to database
       try {
         await axios.post(
-          "/api/stake/add",
+          "/staking/api/stake/add",
           {
             txId: stakeHash,
             amount,

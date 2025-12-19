@@ -51,7 +51,7 @@ export async function getPlanList() {
 
     try{
       const response = await axios.get(
-        "/api/stake/plan",
+        "/staking/api/stake/plan",
         {
           headers: {
             "Content-Type": "application/json",
@@ -80,7 +80,7 @@ export async function getPlanList() {
 export async function getUserStakedList(walletAddress: string): Promise<StakeInfo[]> {
   try {
     const response = await axios.post(
-      "/api/stake/stakelist",
+      "/staking/api/stake/stakelist",
       { walletAddress },
       { headers: { "Content-Type": "application/json" } }
     );
@@ -142,7 +142,7 @@ export async function getUserStakedList(walletAddress: string): Promise<StakeInf
 export async function getUserRewards(walletAddress: string): Promise<RewardItem> {
   try {
     const response = await axios.post(
-      "/api/stake/rewards",
+      "/staking/api/stake/rewards",
       { walletAddress },
       { headers: { "Content-Type": "application/json" } }
     );
@@ -165,7 +165,7 @@ export async function getUserRewards(walletAddress: string): Promise<RewardItem>
 
 export async function getChart(): Promise<ChartResponse> {
   try {
-    const response = await axios.get("/api/baseChart/chart", {
+    const response = await axios.get("/staking/api/baseChart/chart", {
       headers: { "Content-Type": "application/json" },
     });
 
@@ -191,7 +191,7 @@ export async function claimReward(
 ): Promise<ClaimResponse> {
   try {
     const response = await axios.post(
-      "/api/stake/claimreward",
+      "/staking/api/stake/claimreward",
       { walletAddress, stakeId:planId },
       { headers: { "Content-Type": "application/json" } }
     );
@@ -230,7 +230,7 @@ export async function withdrawAmt(
 ): Promise<ClaimResponse> {
   try {
     const response = await axios.post(
-      "/api/stake/withdraw",
+      "/staking/api/stake/withdraw",
       { walletAddress, stakeId:id,txid },
       { headers: { "Content-Type": "application/json" } }
     );

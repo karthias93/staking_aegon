@@ -30,7 +30,7 @@ export const XpProvider = ({ children }: { children: React.ReactNode }) => {
   async function fetchXPDetails() {
     if (walletAddress) {
       const checkEligible = await axios.post(
-        "/api/game/latest-game",
+        "/staking/api/game/latest-game",
         { walletAddress },
         { headers: { "Content-Type": "application/json" } }
       );

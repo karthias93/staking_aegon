@@ -76,7 +76,7 @@ export default function WalletButton() {
     if (!username) return toast.error("Please enter a username");
 
     try {
-      const response = await axios.post("/api/user", {
+      const response = await axios.post("/staking/api/user", {
         username,
         walletAddress: address,
       });
@@ -106,7 +106,7 @@ export default function WalletButton() {
       if (!isConnected || !address) return;
 
       try {
-        const res = await axios.get("/api/user", {
+        const res = await axios.get("/staking/api/user", {
           params: { walletAddress: address },
         });
 
